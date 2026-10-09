@@ -49,17 +49,41 @@ static void flush_callback(lv_display_t *disp, const lv_area_t *area, uint8_t *p
     const int src_w = area->x2 - area->x1 + 1;
     const int src_h = area->y2 - area->y1 + 1;
     const uint16_t *src = reinterpret_cast<const uint16_t *>(px_map);
-    // For LV_DISPLAY_ROTATION_90, native pixel = (1023-y, x).
-    // The physical panel itself stays at its native 1024x600 orientation.
-    for (int y = 0; y < src_h; ++y) {
-        for (int x = 0; x < src_w; ++x) {
-            portrait_flush_buf[x * src_h + (src_h - 1 - y)] = src[y * src_w + x];
+    // LVGL begins flushing in native landscape (1024x600) before
+    // Notes::start() requests portrait rotation. Handle BOTH cases.
+    int native_x, native_y, native_w, native_h;
+    const uint8_t *output = px_map;
+    const lv_display_rotation_t rotation = lv_display_get_rotation(disp);
+    if (rotation == LV_DISPLAY_ROTATION_0) {
+        native_x = area->x1;
+        native_y = area->y1;
+        native_w = src_w;
+        native_h = src_h;
+    } else if (rotation == LV_DISPLAY_ROTATION_90) {
+        native_x = 1023 - area->y2;
+        native_y = area->x1;
+        native_w = src_h;
+        native_h = src_w;
+        for (int y = 0; y < src_h; ++y) {
+            for (int x = 0; x < src_w; ++x) {
+                portrait_flush_buf[x * src_h + (src_h - 1 - y)] = src[y * src_w + x];
+            }
         }
+        output = reinterpret_cast<const uint8_t *>(portrait_flush_buf);
+    } else {
+        Serial.println("Unsupported display rotation");
+        lv_display_flush_ready(disp);
+        return;
     }
-    int native_x = 1024 - 1 - area->y2;
-    int native_y = area->x1;
-    lcd->drawBitmap(native_x, native_y, src_h, src_w,
-                    reinterpret_cast<const uint8_t *>(portrait_flush_buf));
+    // Never submit coordinates outside the physical EK79007 panel.
+    if (native_x < 0 || native_y < 0 ||
+        native_x + native_w > 1024 || native_y + native_h > 600) {
+        Serial.printf("Invalid LCD rectangle: (%d,%d) %dx%d rotation=%d\n",
+                      native_x, native_y, native_w, native_h, (int)rotation);
+        lv_display_flush_ready(disp);
+        return;
+    }
+    lcd->drawBitmap(native_x, native_y, native_w, native_h, output);
     if (lcd->getBus()->getBasicAttributes().type == ESP_PANEL_BUS_TYPE_RGB) {
         lv_display_flush_ready(disp);
     }
