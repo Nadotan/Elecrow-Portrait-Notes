@@ -78,7 +78,7 @@ static void flush_callback(lv_display_t *disp, const lv_area_t *area, uint8_t *p
     // Never submit coordinates outside the physical EK79007 panel.
     if (native_x < 0 || native_y < 0 ||
         native_x + native_w > 1024 || native_y + native_h > 600) {
-        Serial.printf("Invalid LCD rectangle: (%d,%d) %dx%d rotation=%d\n",
+        Serial.printf("Invalid LCD rectangle: (%d,%d) %dx%d rotation=%d\\n",
                       native_x, native_y, native_w, native_h, (int)rotation);
         lv_display_flush_ready(disp);
         return;
