@@ -110,7 +110,7 @@ static void touch(lv_event_t *e){
  prev_x=x;prev_y=y;dirty=refresh=true;last_edit=millis();
 }
 static lv_obj_t *label(lv_obj_t *p,const char *s,int x,int y,int size){
- lv_obj_t *o=lv_label_create(p);lv_label_set_text(o,s);lv_obj_set_pos(o,x,y);if(size==20)lv_obj_set_style_text_font(o,&lv_font_montserrat_20,0);return o;
+ lv_obj_t *o=lv_label_create(p);lv_label_set_text(o,s);lv_obj_set_pos(o,x,y);if(size==20)lv_obj_set_style_text_font(o,&lv_font_montserrat_30,0);return o;
 }
 static lv_obj_t *btn(lv_obj_t *p,const char *s,int x,int y,int w,int h,lv_event_cb_t cb,intptr_t id){
  lv_obj_t *b=lv_button_create(p);lv_obj_set_pos(b,x,y);lv_obj_set_size(b,w,h);
