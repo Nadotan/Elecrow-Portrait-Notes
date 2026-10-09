@@ -1,0 +1,57 @@
+
+name: Build Elecrow Portrait Notes V1.2
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/build.yml'
+      - 'NotesUI.h'
+      - 'prepare.py'
+
+jobs:
+  firmware:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download Elecrow source
+        run: |
+          git clone --depth 1 \
+            https://github.com/Elecrow-RD/CrowPanel-Advanced-9inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen.git vendor
+
+      - name: Prepare project
+        run: |
+          python prepare.py
+          mkdir -p "$HOME/Arduino/libraries"
+          cp -a vendor/example/V1.2/Arduino_Code/libraries/. "$HOME/Arduino/libraries/"
+
+      - name: Install Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Install ESP32 core
+        run: |
+          arduino-cli config init
+          arduino-cli config set board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32@3.3.2
+
+      - name: Compile firmware
+        run: |
+          mkdir -p firmware
+          arduino-cli compile \
+            --fqbn esp32:esp32:esp32p4:PSRAM=enabled \
+            --build-property "compiler.cpp.extra_flags=-I${{ github.workspace }}/Sketch/Sketch" \
+            --output-dir firmware \
+            Sketch/Sketch
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: elecrow-portrait-notes-v12
+          path: firmware/
+          if-no-files-found: error
