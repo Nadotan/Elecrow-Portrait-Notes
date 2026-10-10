@@ -1,5 +1,5 @@
 
-name: Build Elecrow Portrait Notes V1.2
+name: Build Elecrow Notes V2 - verify firmware layout
 
 on:
   workflow_dispatch:
@@ -8,39 +8,46 @@ on:
       - '.github/workflows/build.yml'
       - 'NotesUI.h'
       - 'prepare.py'
+      - 'partitions.csv'
+      - 'verify_firmware.py'
 
 jobs:
   firmware:
     runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Download Elecrow source
+      - name: Download official Elecrow V1.2 sources
         run: |
           git clone --depth 1 \
             https://github.com/Elecrow-RD/CrowPanel-Advanced-9inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen.git vendor
 
-      - name: Prepare project
+      - name: Prepare sketch and official libraries
         run: |
           python prepare.py
           mkdir -p "$HOME/Arduino/libraries"
-          cp -a vendor/example/V1.2/Arduino_Code/libraries/. "$HOME/Arduino/libraries/"
+          cp -a vendor/example/V1.2/Arduino_Code/libraries/. \
+            "$HOME/Arduino/libraries/"
 
       - name: Install Arduino CLI
         uses: arduino/setup-arduino-cli@v2
 
-      - name: Install ESP32 core
+      - name: Install ESP32-P4 core
         run: |
           arduino-cli config init
-          arduino-cli config set board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli config set board_manager.additional_urls \
+            https://espressif.github.io/arduino-esp32/package_esp32_index.json
           arduino-cli core update-index
           arduino-cli core install esp32:esp32@3.3.2
 
-      - name: Compile firmware
+      - name: Compile ESP32-P4 firmware
         run: |
           mkdir -p firmware
           arduino-cli compile \
@@ -49,9 +56,12 @@ jobs:
             --output-dir firmware \
             Sketch/Sketch
 
-      - name: Upload firmware
+      - name: Verify actual flash image and partition table
+        run: python verify_firmware.py
+
+      - name: Publish ONLY verified merged image
         uses: actions/upload-artifact@v4
         with:
-          name: elecrow-portrait-notes-v12
-          path: firmware/
+          name: ELECROW-16MB-LAYOUT-VERIFIED-NOT-HARDWARE-TESTED
+          path: firmware/Sketch.ino.merged.bin
           if-no-files-found: error
