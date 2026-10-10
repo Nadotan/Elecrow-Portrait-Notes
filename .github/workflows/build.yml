@@ -44,7 +44,7 @@ jobs:
         run: |
           mkdir -p firmware
           arduino-cli compile \
-            --fqbn esp32:esp32:esp32p4:PSRAM=enabled \
+            --fqbn esp32:esp32:esp32p4:PSRAM=enabled,FlashSize=16M \
             --build-property "compiler.cpp.extra_flags=-I${{ github.workspace }}/Sketch/Sketch" \
             --output-dir firmware \
             Sketch/Sketch
